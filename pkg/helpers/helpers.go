@@ -5,7 +5,10 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"github.com/aditya109/amrutha_assignment/billing/pkg/constants"
 	"github.com/aditya109/amrutha_assignment/pkg/logger"
+	"github.com/aditya109/atomic"
+	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
@@ -239,4 +242,30 @@ func ToLowerSnakeCase(input string) string {
 	}
 
 	return buf.String()
+}
+
+func PrintLandingRequestCurl(c *gin.Context) {
+	curl, err := atomic.Boom(c.Request)
+	if err != nil {
+		log.Println(err)
+	}
+	log.Printf("trace_id: %s, incoming request cURL: %s", getTraceId(c), curl)
+}
+
+func getTraceId(c *gin.Context) string {
+	if c != nil {
+		return c.Request.Header.Get(constants.APPLICATION_TRACE_KEY)
+	}
+	return ""
+}
+
+func CreateUniqueDisplayId(ob interface{}) (string, error) {
+	if uniqueHash, err := ConvertStructIntoHashString(ob); err != nil {
+		return "", fmt.Errorf("error while create unique hashable id for customer: %w", err)
+	} else {
+		if len(uniqueHash) > 16 {
+			uniqueHash = uniqueHash[:16]
+		}
+		return fmt.Sprintf("CUST%s", strings.ToUpper(uniqueHash)), nil
+	}
 }

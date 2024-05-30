@@ -1,13 +1,21 @@
 package context
 
 import (
-	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/aditya109/amrutha_assignment/billing/pkg/constants"
 	"github.com/aditya109/amrutha_assignment/pkg/logger"
+	"github.com/aditya109/amrutha_assignment/pkg/models"
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
+	"io"
+	"log"
+	"net/http"
+	"strings"
 )
 
 type Backdrop interface {
@@ -21,17 +29,26 @@ type Backdrop interface {
 	SetCustomTraceId(traceId string)
 	GetDatabaseInstance() *gorm.DB
 	SetDatabaseLogger()
-	GetContext() context.Context
+	GetContext() *gin.Context
 	SetDatabaseInstance(*gorm.DB)
+	Error(int, models.Error)
+	ReadRequestPayload(dst any) error
+	SetStatusCodeForResponse(code int)
 }
 
-func GetNewBackdrop(c context.Context) Backdrop {
+func GetNewBackdrop(c *gin.Context, db *gorm.DB) Backdrop {
 	return &callContext{
 		metaStore: &MetaStore{
 			TraceId: bindTraceIdToContextAsValue(),
 		},
-		processContext: c,
+		dbInstance: db,
+		ginContext: c,
 	}
+}
+
+// SetStatusCodeForResponse implements models.Backdrop.
+func (c *callContext) SetStatusCodeForResponse(code int) {
+	c.metaStore.StatusCode = code
 }
 
 func (c callContext) SetCustomErrorMessage(msg string) {
@@ -59,14 +76,15 @@ func (c callContext) GetLogger(function interface{}) *logrus.Entry {
 func (c callContext) Response(statusCode int, data interface{}) {
 	log := c.GetLogger(c.Response)
 	log.WithFields(logrus.Fields{"response": data}).Info()
+	c.ginContext.JSON(statusCode, models.SuccessResponse(data, ""))
 }
 
 // GetDatabaseInstance implements Backdrop.
 func (c *callContext) GetDatabaseInstance() *gorm.DB {
 	return c.dbInstance
 }
-func (c callContext) GetContext() context.Context {
-	return c.processContext
+func (c callContext) GetContext() *gin.Context {
+	return c.ginContext
 }
 func (c callContext) GetMode() string {
 	return c.mode
@@ -89,6 +107,44 @@ func (c *callContext) SetMode(mode string) {
 	c.mode = mode
 }
 
+func (c callContext) Error(statusCode int, err models.Error) {
+	logger := c.GetLogger(c.Error)
+	if c.metaStore.StatusCode != 0 {
+		statusCode = c.metaStore.StatusCode
+	} else if statusCode == 0 {
+		logger.Info("invalid status code")
+		c.ginContext.JSON(http.StatusInternalServerError, models.ErrorResponse(err))
+		return
+	}
+
+	if c.metaStore.CustomErrorMessage != "" {
+		err.Message = c.metaStore.CustomErrorMessage
+	} else {
+		switch {
+		case statusCode == http.StatusMethodNotAllowed:
+			err.ResolutionMessage = constants.METHOD_NOT_ALLOWED_MESSAGE
+			err.Message = constants.GENERIC_ERROR_MESSAGE
+		case statusCode == http.StatusUnprocessableEntity:
+			err.ResolutionMessage = constants.REQUEST_BODY_VALIDATION_FAILED
+			err.Message = constants.GENERIC_ERROR_MESSAGE
+		case statusCode == http.StatusNotFound:
+			err.ResolutionMessage = constants.RESOURCE_NOT_FOUND_MESSAGE
+			err.Message = constants.GENERIC_ERROR_MESSAGE
+		case statusCode == http.StatusInternalServerError:
+			fallthrough
+		default:
+			err.Message = constants.GENERIC_ERROR_MESSAGE
+		}
+	}
+
+	if c.metaStore.CustomResolutionMessage != "" {
+		err.ResolutionMessage = c.metaStore.CustomResolutionMessage
+	}
+	err.ResolutionMessage = fmt.Sprintf("%s, trace_id: %s", err.ResolutionMessage, c.metaStore.TraceId)
+	log.Printf("status_code: %d, err: %v", statusCode, err)
+	c.ginContext.AbortWithStatusJSON(statusCode, models.ErrorResponse(err))
+}
+
 func bindTraceIdToContextAsValue() string {
 	return uuid.New().String()
 }
@@ -98,4 +154,65 @@ func GetTraceId(c *gin.Context) string {
 		return c.Request.Header.Get(constants.APPLICATION_TRACE_KEY)
 	}
 	return ""
+}
+
+func (c *callContext) ReadRequestPayload(dst any) error {
+	body := c.ginContext.Request.Body
+	maxBytes := 1_048_576
+	body = http.MaxBytesReader(c.ginContext.Writer, body, int64(maxBytes))
+	decoder := json.NewDecoder(body)
+	//decoder.DisallowUnknownFields()
+	if err := decoder.Decode(dst); err != nil {
+		var syntaxError *json.SyntaxError
+		var unmarshalTypeError *json.UnmarshalTypeError
+		var invalidUnmarshalError *json.InvalidUnmarshalError
+		var maxBytesError *http.MaxBytesError
+
+		switch {
+		case errors.As(err, &syntaxError):
+			return fmt.Errorf("body contains badly-formed JSON (at character %d)", syntaxError.Offset)
+		case errors.Is(err, io.ErrUnexpectedEOF):
+			return errors.New("body contains badly-formed JSON")
+		case errors.As(err, &unmarshalTypeError):
+			if unmarshalTypeError.Field != "" {
+				return fmt.Errorf("body contains incorrect JSON type for field %q", unmarshalTypeError.Field)
+			}
+			return fmt.Errorf("body contains badly-formed JSON (at character %d)", unmarshalTypeError.Offset)
+		case errors.Is(err, io.EOF):
+			return errors.New("body must not be empty")
+		case strings.HasPrefix(err.Error(), "json: unknown field"):
+			fieldName := strings.TrimPrefix(err.Error(), "json: unknown field")
+			return fmt.Errorf("body contains unknown key %s", fieldName)
+		case errors.As(err, &maxBytesError):
+			return fmt.Errorf("body must not be larger than %d bytes", maxBytesError.Limit)
+		case errors.As(err, &invalidUnmarshalError):
+			return err
+		default:
+			return err
+		}
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		return errors.New("body must only contain a single JSON value")
+	}
+	return nil
+}
+func (c *callContext) IsJsonStructValidationSuccessful(data interface{}) error {
+	// Create a new validator instance
+	validatorInstance := validator.New()
+
+	// Validate the struct
+	var s = make([]string, 0)
+	err := validatorInstance.Struct(data)
+	if err != nil {
+		// Extract detailed validation errors
+		if _, ok := err.(*validator.InvalidValidationError); ok {
+			return err
+		}
+		for _, verr := range err.(validator.ValidationErrors) {
+			s = append(s, fmt.Sprintf("field: %s, error: %s", verr.Field(), fmt.Sprintf("%s", verr.Tag())))
+		}
+
+	}
+
+	return fmt.Errorf(strings.Join(s, ";"))
 }

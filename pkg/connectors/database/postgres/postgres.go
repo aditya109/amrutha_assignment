@@ -24,7 +24,7 @@ func (construct *PostgresConstruct) Connect() error {
 
 	db, err = gorm.Open(postgres.Open(construct.Config.DatabaseUrl), &gorm.Config{
 		NamingStrategy: schema.NamingStrategy{
-			TablePrefix: fmt.Sprintf("%s.", construct.Config.DatabaseName),
+			TablePrefix: fmt.Sprintf("%s.", construct.Config.SchemaName),
 		},
 		Logger: logger.Default.LogMode(logger.Info),
 	})

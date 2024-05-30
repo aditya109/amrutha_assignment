@@ -9,6 +9,7 @@ import (
 type Config struct {
 	DatabaseUrl  string
 	DatabaseName string
+	SchemaName   string
 }
 
 type Connector interface {

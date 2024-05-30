@@ -1,1 +1,0 @@
-migrate -database postgres://postgres:postgres@localhost:5432/recon?sslmode=disable -path ./billing/database/migration/scripts up

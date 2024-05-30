@@ -22,7 +22,6 @@ type ServerHTTPLog struct {
 	StatusCode    int    `json:"statusCode,omitempty"`
 	ResponseTime  string `json:"responseTime,omitempty"`
 	UserAgent     string `json:"userAgent,omitempty"`
-	Platform      string `json:"platform,omitempty"`
 	AppVersion    any    `json:"appVersion,omitempty"`
 	TraceId       string `json:"traceId,omitempty"`
 }
@@ -79,11 +78,8 @@ func GetContextLoggerForGin(data ServerHTTPLog) *logrus.Entry {
 		"status_code":    data.StatusCode,
 		"response_time":  data.ResponseTime,
 		"user_agent":     data.UserAgent,
-		"user":           data.UserId,
-		"platform":       data.Platform,
 		"app_version":    data.AppVersion,
 		"trace_id":       data.TraceId,
-		"span_id":        data.SpanId,
 	})
 }
 
