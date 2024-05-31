@@ -12,7 +12,7 @@ import (
 func FindOne(b context.Backdrop, loan *models.Loan) error {
 	db := b.GetDatabaseInstance()
 
-	if result := db.Where(models.Loan{Customer: models.Customer{DisplayId: loan.Customer.DisplayId}}).First(&loan); result.Error == nil {
+	if result := db.Where(models.Loan{Customer: &models.Customer{DisplayId: loan.Customer.DisplayId}}).First(&loan); result.Error == nil {
 		return nil
 	} else if !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return fmt.Errorf("error occured while looking for customer with id %v", loan.DisplayId)
@@ -23,13 +23,18 @@ func FindOne(b context.Backdrop, loan *models.Loan) error {
 
 func IfExists(b context.Backdrop, loan *models.Loan) (bool, error) {
 	db := b.GetDatabaseInstance()
-
-	if result := db.Where(models.Loan{Customer: models.Customer{DisplayId: loan.Customer.DisplayId}}).First(&loan); result.Error == nil {
+	if result := db.Model(&models.Loan{}).
+		Preload("LoanConfig").
+		Preload("Customer").
+		Where(&models.Loan{
+			CustomerId: 1,
+		}).
+		Find(&loan); result.Error == nil && result.RowsAffected != 0 {
 		return true, nil
-	} else if !errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return false, fmt.Errorf("error occured while looking for active loan with customer with id %v", loan.Customer.DisplayId)
-	} else {
+	} else if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return false, nil
+	} else {
+		return false, fmt.Errorf("error occurred while looking for active loan with customer id %v: %w", loan.Customer.DisplayId, result.Error)
 	}
 }
 

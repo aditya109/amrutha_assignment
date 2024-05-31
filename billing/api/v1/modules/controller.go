@@ -15,7 +15,9 @@ func GetCustomerStateForDeliquencyRoute(b context.Backdrop) {
 
 }
 
-func MakePaymentController(b context.Backdrop) {}
+func MakePaymentController(b context.Backdrop) {
+
+}
 
 func CreateNewCustomerController(b context.Backdrop) {
 	var body CustomerDto

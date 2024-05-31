@@ -55,26 +55,26 @@ create table if not exists billing.payments(
     id serial primary key,
     created_at timestamp default now(),
     updated_at timestamp default now(),
-    loan_id int not null,
+    loan_account_id int not null,
     customer_id int not null,
     amount varchar not null,
     is_accepted boolean not null default false,
-    foreign key (loan_id) references billing.loans(id),
+    foreign key (loan_account_id) references billing.loan_accounts(id),
     foreign key (customer_id) references billing.customers(id)
 );
 
-create table if not exists billing.loan_account(
-                                                   id serial primary key,
-                                                   created_at timestamp default now(),
-                                                   updated_at timestamp default now(),
-                                                   loan_id int not null,
-                                                   payable_principal_amount varchar not null,
-                                                   accrued_interest varchar not null,
-                                                   total_payable_amount varchar not null,
-                                                   total_paid_amount varchar not null,
-                                                   outstanding_amount varchar not null,
-                                                   installment_amount varchar not null,
-                                                   foreign key (loan_id) references billing.loans(id)
+create table if not exists billing.loan_accounts(
+   id serial primary key,
+   created_at timestamp default now(),
+   updated_at timestamp default now(),
+   loan_id int not null,
+   payable_principal_amount varchar not null,
+   accrued_interest varchar not null,
+   total_payable_amount varchar not null,
+   total_paid_amount varchar not null,
+   outstanding_amount varchar not null,
+   installment_amount varchar not null,
+   foreign key (loan_id) references billing.loans(id)
 );
 
 create table if not exists billing.billing_schedules(
@@ -86,12 +86,12 @@ create table if not exists billing.billing_schedules(
     start_date timestamp not null,
     end_date timestamp not null,
     week_count int not null,
-    foreign key (loan_account_id) references billing.loan_account(id)
+    foreign key (loan_account_id) references billing.loan_accounts(id)
 );
 
 
 
-create index if not exists idx_load_id on billing.loan_account(loan_id);
+create index if not exists idx_load_id on billing.loan_accounts(loan_id);
 create index if not exists idx_loan_account_id on billing.billing_schedules(loan_account_id);
 create index if not exists idx_load_id on billing.payments(loan_id);
 create index if not exists idx_customer_id on billing.payments(customer_id);
@@ -103,9 +103,16 @@ add column if not exists display_id varchar(20) not null;
 alter table billing.loans
 add column if not exists display_id varchar(20) not null;
 
-alter table billing.loan_account
+alter table billing.loan_accounts
 add column if not exists installment_amount varchar not null;
+
+alter table billing.loan_accounts
+add column if not exists display_id varchar(20) not null;
+
+
+ALTER TYPE billing.interest_type ADD VALUE 'FLAT';
 
 INSERT INTO billing.loan_configs
 (id, principal_amount, max_span, rate_of_interest, type_of_loan, is_active)
-VALUES(nextval('billing.loan_configs_id_seq'::regclass), '5000000.00', 50, '0.1', 'SIMPLE'::billing.interest_type, true);
+VALUES(nextval('billing.loan_configs_id_seq'::regclass), '5000000.00', 50, '0.1', 'FLAT'::billing.interest_type, true);
+

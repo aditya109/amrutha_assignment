@@ -4,6 +4,7 @@ import (
 	"github.com/aditya109/amrutha_assignment/billing/internal/domain/loan"
 	"github.com/aditya109/amrutha_assignment/billing/internal/models"
 	"github.com/aditya109/amrutha_assignment/billing/internal/repositories/customer_repository"
+	"github.com/aditya109/amrutha_assignment/billing/pkg/constants"
 	"github.com/aditya109/amrutha_assignment/pkg/context"
 	"github.com/aditya109/amrutha_assignment/pkg/helpers"
 	"time"
@@ -22,7 +23,7 @@ func createNewCustomerService(b context.Backdrop, body CustomerDto) (interface{}
 	if customer.DisplayId, err = helpers.CreateUniqueDisplayId(models.Customer{
 		Name:    customer.Name,
 		Address: customer.Address,
-	}); err != nil {
+	}, constants.CUSTOMER_PREFIX); err != nil {
 		return nil, err
 	}
 	if *customer, err = customer_repository.UniqueSave(b, customer); err != nil {

@@ -16,4 +16,5 @@ const (
 	VariableInterestType InterestType = "VARIABLE"
 	SimpleInterestType   InterestType = "SIMPLE"
 	CompoundInterestType InterestType = "COMPOUND"
+	FlatInterestType     InterestType = "FLAT"
 )

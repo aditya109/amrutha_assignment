@@ -12,3 +12,9 @@ const (
 	VALIDATION_FAILED              = "validation failed"
 	INTERNAL_SERVER_ERROR          = "internal server error"
 )
+
+const (
+	CUSTOMER_PREFIX     = "CUST"
+	LOAN_PREFIX         = "LN"
+	LOAN_ACCOUNT_PREFIX = "LNAC"
+)

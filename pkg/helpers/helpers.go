@@ -259,13 +259,13 @@ func getTraceId(c *gin.Context) string {
 	return ""
 }
 
-func CreateUniqueDisplayId(ob interface{}) (string, error) {
+func CreateUniqueDisplayId(ob interface{}, prefix string) (string, error) {
 	if uniqueHash, err := ConvertStructIntoHashString(ob); err != nil {
 		return "", fmt.Errorf("error while create unique hashable id for customer: %w", err)
 	} else {
 		if len(uniqueHash) > 16 {
 			uniqueHash = uniqueHash[:16]
 		}
-		return fmt.Sprintf("CUST%s", strings.ToUpper(uniqueHash)), nil
+		return fmt.Sprintf("%s%s", prefix, strings.ToUpper(uniqueHash)), nil
 	}
 }

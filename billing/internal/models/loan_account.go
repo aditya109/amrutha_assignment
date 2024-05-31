@@ -14,4 +14,5 @@ type LoanAccount struct {
 	TotalPaidAmount        string    `gorm:"column:total_paid_amount" json:"totalPaidAmount"`
 	OutstandingAmount      string    `gorm:"column:outstanding_amount" json:"outstandingAmount"`
 	InstallmentAmount      string    `gorm:"column:installment_amount" json:"installmentAmount"`
+	DisplayId              string    `json:"displayId" gorm:"column:display_id"`
 }

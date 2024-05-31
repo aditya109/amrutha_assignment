@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="recon@localhost" uuid="54e1a972-af74-4943-8ff7-3a9759baf03d">
+    <data-source source="LOCAL" name="recondb" uuid="d94a0936-5f80-4ff8-b730-4bf0f4b23256">
       <driver-ref>postgresql</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.postgresql.Driver</jdbc-driver>
