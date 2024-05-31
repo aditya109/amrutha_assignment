@@ -27,11 +27,11 @@ func IfExists(b context.Backdrop, loan *models.Loan) (bool, error) {
 		Preload("LoanConfig").
 		Preload("Customer").
 		Where(&models.Loan{
-			CustomerId: 1,
+			CustomerId: uint64(loan.Customer.ID),
 		}).
 		Find(&loan); result.Error == nil && result.RowsAffected != 0 {
 		return true, nil
-	} else if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+	} else if errors.Is(result.Error, gorm.ErrRecordNotFound) || result.RowsAffected == 0 {
 		return false, nil
 	} else {
 		return false, fmt.Errorf("error occurred while looking for active loan with customer id %v: %w", loan.Customer.DisplayId, result.Error)

@@ -16,7 +16,28 @@ func GetCustomerStateForDeliquencyRoute(b context.Backdrop) {
 }
 
 func MakePaymentController(b context.Backdrop) {
-
+	var body MakePaymentRequestDto
+	body.CustomerId = b.GetContext().Param("customerId")
+	if err := b.ReadRequestPayload(&body); err != nil {
+		b.Error(http.StatusBadRequest, models.Error{
+			Code:              constants.VALIDATION_FAILED,
+			Message:           constants.GENERIC_ERROR_MESSAGE,
+			ResolutionMessage: fmt.Errorf("%s, err: %v", constants.REQUEST_BODY_VALIDATION_FAILED, err).Error(),
+			Data:              nil,
+		})
+		return
+	}
+	if result, err := makePaymentService(b, body); err != nil {
+		b.Error(http.StatusInternalServerError, models.Error{
+			Code:              models.INTERNAL_SERVER_ERROR_MESSAGE,
+			Message:           constants.GENERIC_ERROR_MESSAGE,
+			ResolutionMessage: fmt.Errorf("err: %v", err).Error(),
+			Data:              nil,
+		})
+		return
+	} else {
+		b.Response(http.StatusOK, result)
+	}
 }
 
 func CreateNewCustomerController(b context.Backdrop) {
@@ -43,8 +64,8 @@ func CreateNewCustomerController(b context.Backdrop) {
 	}
 }
 
-func ActivateLoanController(b context.Backdrop) {
-	var body ActivateLoanRequestDto
+func TransitionLoanController(b context.Backdrop) {
+	var body TransitionLoanRequestDto
 	body.CustomerId = b.GetContext().Param("customerId")
 
 	if err := b.ReadRequestPayload(&body); err != nil {
@@ -57,7 +78,7 @@ func ActivateLoanController(b context.Backdrop) {
 		return
 	}
 
-	if result, err := activateLoanService(b, body); err != nil {
+	if result, err := transitionLoanService(b, body); err != nil {
 		b.Error(http.StatusInternalServerError, models.Error{
 			Code:              models.INTERNAL_SERVER_ERROR_MESSAGE,
 			Message:           constants.GENERIC_ERROR_MESSAGE,

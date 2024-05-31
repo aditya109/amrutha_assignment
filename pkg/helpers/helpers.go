@@ -39,13 +39,25 @@ func FormatCurrency(value decimal.Decimal) string {
 	return printer.Sprintf(format, num)
 }
 
-func GetDateFromString(dateString string, incomingDateTimeFormat string, outputDateTimeFormat string) string {
-	layout := "2006-01-02"
-	if incomingDateTimeFormat == "YYYY-MM-DD" {
-		myDate, _ := time.Parse(layout, dateString)
-		return myDate.Format(outputDateTimeFormat)
+func GetDateFromString(input string, formats ...string) string {
+	var incomingDateFormat = time.RFC3339Nano
+	var outputDateFormat = "02 Jan 2006 03:04 PM"
+	switch len(formats) {
+	case 1:
+		if formats[0] != "" {
+			incomingDateFormat = formats[0]
+		}
+	case 2:
+		if formats[0] != "" {
+			incomingDateFormat = formats[0]
+		}
+		if formats[1] != "" {
+			outputDateFormat = formats[1]
+		}
 	}
-	return ""
+	t, _ := time.Parse(incomingDateFormat, input)
+
+	return t.Format(outputDateFormat)
 }
 
 func BytesToMapStringInterface(bytes []byte) (map[string]interface{}, error) {

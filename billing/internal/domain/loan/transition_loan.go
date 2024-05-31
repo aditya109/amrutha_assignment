@@ -12,49 +12,39 @@ import (
 	"github.com/aditya109/amrutha_assignment/billing/pkg/constants"
 	"github.com/aditya109/amrutha_assignment/pkg/context"
 	"github.com/aditya109/amrutha_assignment/pkg/helpers"
-	"golang.org/x/sync/errgroup"
 	"log"
 	"net/http"
 	"time"
 )
 
-type TransistionLoanConstruct struct {
+type TransitionLoanConstruct struct {
 	CustomerId      string
 	ConfigurationId *int
 }
 
-func (c TransistionLoanConstruct) TransistionLoan(b context.Backdrop) (*models.Loan, error) {
+type Output struct {
+	Loan            *models.Loan            `json:"loan,omitempty"`
+	LoanAccount     *models.LoanAccount     `json:"loanAccount,omitempty"`
+	NearestSchedule *models.BillingSchedule `json:"nearestSchedule,omitempty"`
+	Customer        *models.Customer        `json:"customer,omitempty"`
+}
+
+func (c TransitionLoanConstruct) TransitionLoan(b context.Backdrop) (*Output, error) {
 	var loan = &models.Loan{
 		Customer: &models.Customer{DisplayId: c.CustomerId},
 	}
 	var existingCustomer = &models.Customer{DisplayId: c.CustomerId}
 	var doesLoanExists bool
 	var err error
-	g := new(errgroup.Group)
-	g.Go(func() error {
-		var e error
-		defer func() {
-			if doesLoanExists, err = loan_repository.IfExists(b, loan); err != nil {
-				e = err
-			}
-		}()
-		return e
-	})
-	g.Go(func() error {
-		var e error
-		defer func() {
-			if err = customer_repository.FindOne(b, existingCustomer); err != nil {
-				e = err
-			}
 
-		}()
-		return e
-	})
-
-	if syncErr := g.Wait(); syncErr != nil {
-		return nil, fmt.Errorf("error while making concurrent database calls: err : %v", syncErr)
+	if err = customer_repository.FindOne(b, existingCustomer); err != nil {
+		return nil, err
 	}
 	loan.Customer = existingCustomer
+	if doesLoanExists, err = loan_repository.IfExists(b, loan); err != nil {
+		return nil, err
+	}
+
 	switch {
 	case !existingCustomer.IsActive:
 		switch existingCustomer.Type {
@@ -67,26 +57,33 @@ func (c TransistionLoanConstruct) TransistionLoan(b context.Backdrop) (*models.L
 					return nil, fmt.Errorf("there is an active loan on the user, loan id: %v", loan.DisplayId)
 				case models.InactiveLoanType:
 					loan.LoanState = models.ActiveLoanType
+					loan.Customer.IsActive = true
 					if err := loan_repository.Update(b, loan); err != nil {
 						return nil, fmt.Errorf("error while updating loan state: %v from %s to %s", err, loan.LoanState, models.ActiveLoanType)
 					}
-					if err := attachNewLoanAccount(b, loan); err != nil {
+					if result, err := attachNewLoanAccount(b, loan); err != nil {
 						loan.LoanState = models.InactiveLoanType
 						if err := loan_repository.Update(b, loan); err != nil {
-							return nil, fmt.Errorf("error while updating loan state: %v from %s to %s", err, loan.LoanState, models.ActiveLoanType)
+							return nil, fmt.Errorf("error while updating loan state: %v from %s to %s", err, loan.LoanState, models.InactiveLoanType)
 						}
 						return nil, fmt.Errorf("error while updating loan schedule: %v", err)
+					} else {
+						return result, nil
 					}
 				case models.PaidLoanType:
-					if err := createNewLoan(b, loan, c.ConfigurationId); err != nil {
+					if result, err := createNewLoan(b, loan, c.ConfigurationId); err != nil {
 						return nil, fmt.Errorf("error while creating new loan: %v", err)
+					} else {
+						return result, nil
 					}
 				default:
 					return nil, fmt.Errorf("there is an unknown loan state: %v", loan.LoanState)
 				}
 			} else {
-				if err := createNewLoan(b, loan, c.ConfigurationId); err != nil {
+				if result, err := createNewLoan(b, loan, c.ConfigurationId); err != nil {
 					return nil, fmt.Errorf("error while creating new loan: %v", err)
+				} else {
+					return result, nil
 				}
 			}
 		case models.DelinquentCustomerState:
@@ -105,7 +102,7 @@ func (c TransistionLoanConstruct) TransistionLoan(b context.Backdrop) (*models.L
 				}
 
 				if err := loan_repository.Update(b, loan); err != nil {
-					return nil, fmt.Errorf("error while updating loan state: %v from %s to %s", err, loan.LoanState, models.ActiveLoanType)
+					return nil, fmt.Errorf("error while updating loan state: %v from %s to %s", err, loan.LoanState, models.PaidLoanType)
 				}
 			} else {
 				log.Println("loan for this user does not already exists, not possible")
@@ -122,16 +119,16 @@ func (c TransistionLoanConstruct) TransistionLoan(b context.Backdrop) (*models.L
 	return nil, nil
 }
 
-func createNewLoan(b context.Backdrop, loan *models.Loan, configurationId *int) error {
+func createNewLoan(b context.Backdrop, loan *models.Loan, configurationId *int) (*Output, error) {
 	var loanConfig = &models.LoanConfig{}
 	var err error
 	if configurationId == nil {
 		b.SetStatusCodeForResponse(http.StatusBadRequest)
-		return fmt.Errorf("configuration id is required")
+		return nil, fmt.Errorf("configuration id is required")
 	}
 	loan.LoanState = models.InactiveLoanType
 	if err = loan_config_repository.FindOne(b, loanConfig); err != nil {
-		return err
+		return nil, err
 	}
 	loan.LoanConfig = loanConfig
 
@@ -139,23 +136,41 @@ func createNewLoan(b context.Backdrop, loan *models.Loan, configurationId *int) 
 		Customer:   &models.Customer{DisplayId: loan.DisplayId, ID: loan.Customer.ID},
 		LoanConfig: &models.LoanConfig{Id: loan.LoanConfig.Id},
 	}, constants.LOAN_PREFIX); err != nil {
-		return err
+		return nil, err
 	}
-	return loan_repository.Update(b, loan)
+	err = loan_repository.Update(b, loan)
+	if err != nil {
+		return nil, err
+	}
+	return &Output{
+		Loan: &models.Loan{
+			DisplayId:              loan.DisplayId,
+			LoanState:              loan.LoanState,
+			MissedPaymentCount:     loan.MissedPaymentCount,
+			PaymentCompletionCount: loan.PaymentCompletionCount,
+		},
+		Customer: &models.Customer{
+			Name:      loan.Customer.Name,
+			Address:   loan.Customer.Address,
+			DisplayId: loan.Customer.DisplayId,
+			Type:      loan.Customer.Type,
+			IsActive:  loan.Customer.IsActive,
+		},
+	}, nil
 }
 
-func attachNewLoanAccount(b context.Backdrop, loan *models.Loan) error {
+func attachNewLoanAccount(b context.Backdrop, loan *models.Loan) (*Output, error) {
 	var loanConfig = loan.LoanConfig
 	var construct *interest_calculation_rules.ResultantConstructForLoanAccount
 	var err error
 	if construct, err = interest_calculation_rules.CalculateInitialConstructForLoanAccount(b, loanConfig); err != nil {
-		return fmt.Errorf("error while calculating construct for loan account: %v", err)
+		return nil, fmt.Errorf("error while calculating construct for loan account: %v", err)
 	}
 	var loanAccount = &models.LoanAccount{
-		CreatedAt:              time.Now(),
-		UpdatedAt:              time.Now(),
-		LoanId:                 0,
-		Loan:                   *loan,
+		CreatedAt:              helpers.CreatePointerForValue(time.Now()),
+		UpdatedAt:              helpers.CreatePointerForValue(time.Now()),
+		LoanId:                 int(loan.Id),
+		Loan:                   loan,
 		PayablePrincipalAmount: construct.PayablePrincipalAmount.String(),
 		AccruedInterest:        construct.AccruedInterest.String(),
 		TotalPayableAmount:     construct.TotalPayableAmount.String(),
@@ -165,21 +180,21 @@ func attachNewLoanAccount(b context.Backdrop, loan *models.Loan) error {
 	}
 	if loanAccount.DisplayId, err = helpers.CreateUniqueDisplayId(models.LoanAccount{
 		LoanId: int(loan.Id),
-		Loan: models.Loan{
+		Loan: &models.Loan{
 			Id:         loan.Id,
 			DisplayId:  loan.DisplayId,
 			Customer:   &models.Customer{DisplayId: loan.DisplayId, ID: loan.Customer.ID},
 			LoanConfig: &models.LoanConfig{Id: loan.LoanConfig.Id},
 		},
 	}, constants.LOAN_ACCOUNT_PREFIX); err != nil {
-		return err
+		return nil, err
 	}
 	if err = loan_account_repository.Update(b, loanAccount); err != nil {
-		return fmt.Errorf("error while updating loan account: %v", err)
+		return nil, fmt.Errorf("error while updating loan account: %v", err)
 	}
 
 	// create first schedule
-	var schedule = &models.BillingSchedule{
+	var nearestSchedule = &models.BillingSchedule{
 		CreatedAt:         time.Now(),
 		UpdatedAt:         time.Now(),
 		LoanAccountId:     loanAccount.Id,
@@ -188,8 +203,38 @@ func attachNewLoanAccount(b context.Backdrop, loan *models.Loan) error {
 		WeekCount:         1,
 		InstallmentAmount: construct.WeeklyInstallmentAmount.String(),
 	}
-	if err = billing_schedule_repository.Update(b, schedule); err != nil {
-		return fmt.Errorf("error while updating loan schedule: %v", err)
+	if err = billing_schedule_repository.Update(b, nearestSchedule); err != nil {
+		return nil, fmt.Errorf("error while updating loan schedule: %v", err)
 	}
-	return nil
+	return &Output{
+
+		LoanAccount: &models.LoanAccount{
+			PayablePrincipalAmount: helpers.FormatCurrency(construct.PayablePrincipalAmount),
+			AccruedInterest:        helpers.FormatCurrency(construct.AccruedInterest),
+			TotalPayableAmount:     helpers.FormatCurrency(construct.TotalPayableAmount),
+			TotalPaidAmount:        helpers.FormatCurrency(construct.TotalPaidAmount),
+			OutstandingAmount:      helpers.FormatCurrency(construct.OutstandingAmount),
+			InstallmentAmount:      helpers.FormatCurrency(construct.WeeklyInstallmentAmount),
+			DisplayId:              loanAccount.DisplayId,
+		},
+		NearestSchedule: &models.BillingSchedule{
+			StartDate:         nearestSchedule.StartDate,
+			EndDate:           nearestSchedule.EndDate,
+			WeekCount:         nearestSchedule.WeekCount,
+			InstallmentAmount: nearestSchedule.InstallmentAmount,
+		},
+		Loan: &models.Loan{
+			DisplayId:              loan.DisplayId,
+			LoanState:              loan.LoanState,
+			MissedPaymentCount:     loan.MissedPaymentCount,
+			PaymentCompletionCount: loan.PaymentCompletionCount,
+		},
+		Customer: &models.Customer{
+			Name:      loan.Customer.Name,
+			Address:   loan.Customer.Address,
+			DisplayId: loan.Customer.DisplayId,
+			Type:      loan.Customer.Type,
+			IsActive:  loan.Customer.IsActive,
+		},
+	}, nil
 }

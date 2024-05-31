@@ -57,8 +57,11 @@ create table if not exists billing.payments(
     updated_at timestamp default now(),
     loan_account_id int not null,
     customer_id int not null,
-    amount varchar not null,
+    paid_amount varchar not null,
     is_accepted boolean not null default false,
+    date_of_transaction timestamp not null,
+    client_transaction_reference_id varchar not null,
+    payment_id varchar(20) not null,
     foreign key (loan_account_id) references billing.loan_accounts(id),
     foreign key (customer_id) references billing.customers(id)
 );

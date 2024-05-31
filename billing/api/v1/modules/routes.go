@@ -42,7 +42,7 @@ func GetModule() api.ApiModule {
 			{
 				Path:       putActivateLoan,
 				Method:     http.MethodPut,
-				Controller: api.WrapHighOrderControl(ActivateLoanController),
+				Controller: api.WrapHighOrderControl(TransitionLoanController),
 			},
 		},
 	}

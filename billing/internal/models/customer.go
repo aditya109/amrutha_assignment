@@ -10,7 +10,7 @@ type Customer struct {
 	Address   string        `gorm:"column:address" json:"address"`
 	CreatedAt *time.Time    `gorm:"column:created_at" json:"createdAt,omitempty"`
 	UpdatedAt *time.Time    `gorm:"column:updated_at" json:"updatedAt,omitempty"`
-	IsActive  bool          `gorm:"column:is_active" json:"isActive,omitempty"`
+	IsActive  bool          `gorm:"column:is_active" json:"isActive"`
 	Type      CustomerState `gorm:"column:typ" json:"type,omitempty"`
 	DisplayId string        `json:"displayId" gorm:"column:display_id"`
 }
