@@ -105,3 +105,7 @@ add column if not exists display_id varchar(20) not null;
 
 alter table billing.loan_account
 add column if not exists installment_amount varchar not null;
+
+INSERT INTO billing.loan_configs
+(id, principal_amount, max_span, rate_of_interest, type_of_loan, is_active)
+VALUES(nextval('billing.loan_configs_id_seq'::regclass), '5000000.00', 50, '0.1', 'SIMPLE'::billing.interest_type, true);
