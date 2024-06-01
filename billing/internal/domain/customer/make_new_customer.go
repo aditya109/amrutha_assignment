@@ -27,7 +27,7 @@ func (c MakeNewCustomerInputConstruct) MakeNewCustomer(b context.Backdrop) (*mod
 	if customer.DisplayId, err = helpers.CreateUniqueDisplayId(models.Customer{
 		Name:    customer.Name,
 		Address: customer.Address,
-	}, constants.CUSTOMER_PREFIX); err != nil {
+	}, constants.CustomerPrefix); err != nil {
 		return nil, err
 	}
 	if *customer, err = customer_repository.UniqueSave(b, customer); err != nil {

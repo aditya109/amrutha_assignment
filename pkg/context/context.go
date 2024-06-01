@@ -19,7 +19,7 @@ import (
 )
 
 type Backdrop interface {
-	// Error(statusCode int, err fallback.Error)
+	// Response Error(statusCode int, err fallback.Error)
 	Response(statusCode int, data interface{})
 	GetLogger(function interface{}) *logrus.Entry
 	GetMetaStore() *MetaStore
@@ -51,31 +51,31 @@ func (c *callContext) SetStatusCodeForResponse(code int) {
 	c.metaStore.StatusCode = code
 }
 
-func (c callContext) SetCustomErrorMessage(msg string) {
+func (c *callContext) SetCustomErrorMessage(msg string) {
 	c.metaStore.CustomErrorMessage = msg
 }
 
-func (c callContext) SetCustomResolutionMessage(msg string) {
+func (c *callContext) SetCustomResolutionMessage(msg string) {
 	c.metaStore.CustomResolutionMessage = msg
 }
 
-func (c callContext) GetAllHeaders() map[string]string {
+func (c *callContext) GetAllHeaders() map[string]string {
 	var fHeaders = make(map[string]string)
-	fHeaders[constants.APPLICATION_TRACE_KEY] = c.metaStore.TraceId
+	fHeaders[constants.ApplicationTraceKey] = c.metaStore.TraceId
 	return fHeaders
 }
 
-func (c callContext) GetMetaStore() *MetaStore {
+func (c *callContext) GetMetaStore() *MetaStore {
 	return c.metaStore
 }
 
-func (c callContext) GetLogger(function interface{}) *logrus.Entry {
+func (c *callContext) GetLogger(function interface{}) *logrus.Entry {
 	return logger.GetInternalContextLogger(function, c.metaStore.TraceId)
 }
 
-func (c callContext) Response(statusCode int, data interface{}) {
-	log := c.GetLogger(c.Response)
-	log.WithFields(logrus.Fields{"response": data}).Info()
+func (c *callContext) Response(statusCode int, data interface{}) {
+	entry := c.GetLogger(c.Response)
+	entry.WithFields(logrus.Fields{"response": data}).Info()
 	c.ginContext.JSON(statusCode, models.SuccessResponse(data, ""))
 }
 
@@ -83,13 +83,13 @@ func (c callContext) Response(statusCode int, data interface{}) {
 func (c *callContext) GetDatabaseInstance() *gorm.DB {
 	return c.dbInstance
 }
-func (c callContext) GetContext() *gin.Context {
+func (c *callContext) GetContext() *gin.Context {
 	return c.ginContext
 }
-func (c callContext) GetMode() string {
+func (c *callContext) GetMode() string {
 	return c.mode
 }
-func (c callContext) SetCustomTraceId(traceId string) {
+func (c *callContext) SetCustomTraceId(traceId string) {
 	c.metaStore.TraceId = traceId
 	// c.SetDatabaseLogger()
 }
@@ -107,12 +107,12 @@ func (c *callContext) SetMode(mode string) {
 	c.mode = mode
 }
 
-func (c callContext) Error(statusCode int, err models.Error) {
-	logger := c.GetLogger(c.Error)
+func (c *callContext) Error(statusCode int, err models.Error) {
+	entry := c.GetLogger(c.Error)
 	if c.metaStore.StatusCode != 0 {
 		statusCode = c.metaStore.StatusCode
 	} else if statusCode == 0 {
-		logger.Info("invalid status code")
+		entry.Info("invalid status code")
 		c.ginContext.JSON(http.StatusInternalServerError, models.ErrorResponse(err))
 		return
 	}
@@ -122,18 +122,18 @@ func (c callContext) Error(statusCode int, err models.Error) {
 	} else {
 		switch {
 		case statusCode == http.StatusMethodNotAllowed:
-			err.ResolutionMessage = constants.METHOD_NOT_ALLOWED_MESSAGE
-			err.Message = constants.GENERIC_ERROR_MESSAGE
+			err.ResolutionMessage = constants.MethodNotAllowedMessage
+			err.Message = constants.GenericErrorMessage
 		case statusCode == http.StatusUnprocessableEntity:
-			err.ResolutionMessage = constants.REQUEST_BODY_VALIDATION_FAILED
-			err.Message = constants.GENERIC_ERROR_MESSAGE
+			err.ResolutionMessage = constants.RequestBodyValidationFailed
+			err.Message = constants.GenericErrorMessage
 		case statusCode == http.StatusNotFound:
-			err.ResolutionMessage = constants.RESOURCE_NOT_FOUND_MESSAGE
-			err.Message = constants.GENERIC_ERROR_MESSAGE
+			err.ResolutionMessage = constants.ResourceNotFoundMessage
+			err.Message = constants.GenericErrorMessage
 		case statusCode == http.StatusInternalServerError:
 			fallthrough
 		default:
-			err.Message = constants.GENERIC_ERROR_MESSAGE
+			err.Message = constants.GenericErrorMessage
 		}
 	}
 
@@ -151,7 +151,7 @@ func bindTraceIdToContextAsValue() string {
 
 func GetTraceId(c *gin.Context) string {
 	if c != nil {
-		return c.Request.Header.Get(constants.APPLICATION_TRACE_KEY)
+		return c.Request.Header.Get(constants.ApplicationTraceKey)
 	}
 	return ""
 }
@@ -205,11 +205,12 @@ func (c *callContext) IsJsonStructValidationSuccessful(data interface{}) error {
 	err := validatorInstance.Struct(data)
 	if err != nil {
 		// Extract detailed validation errors
-		if _, ok := err.(*validator.InvalidValidationError); ok {
+		var invalidValidationError *validator.InvalidValidationError
+		if errors.As(err, &invalidValidationError) {
 			return err
 		}
-		for _, verr := range err.(validator.ValidationErrors) {
-			s = append(s, fmt.Sprintf("field: %s, error: %s", verr.Field(), fmt.Sprintf("%s", verr.Tag())))
+		for _, validationError := range err.(validator.ValidationErrors) {
+			s = append(s, fmt.Sprintf("field: %s, error: %s", validationError.Field(), fmt.Sprintf("%s", validationError.Tag())))
 		}
 
 	}

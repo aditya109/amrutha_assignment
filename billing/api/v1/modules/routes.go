@@ -14,9 +14,9 @@ const (
 	putActivateLoan                      = "/customers/:customerId/loan/transition-state"
 )
 
-func GetModule() api.ApiModule {
-	return api.ApiModule{
-		Module:     constants.SERVICE_IDENTIFIER,
+func GetModule() api.Module {
+	return api.Module{
+		Module:     constants.ServiceIdentifier,
 		ApiVersion: "v1",
 		Routes: []api.Route{
 			{

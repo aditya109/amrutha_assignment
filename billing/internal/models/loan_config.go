@@ -11,6 +11,7 @@ type LoanConfig struct {
 
 type InterestType string
 
+//goland:noinspection GoUnusedConst,GoUnusedConst,GoUnusedConst,GoUnusedConst
 const (
 	FixedInterestType    InterestType = "FIXED"
 	VariableInterestType InterestType = "VARIABLE"

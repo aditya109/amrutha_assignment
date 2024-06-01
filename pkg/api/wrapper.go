@@ -19,7 +19,7 @@ func WrapHighOrderControl(baseController func(b context.Backdrop)) func(c *gin.C
 		var db *gorm.DB
 		databaseUrl := viper.GetString("DATABASE_URL")
 		databaseName := viper.GetString("DATABASE_NAME")
-		var construct = postgres.PostgresConstruct{
+		var construct = postgres.Construct{
 			Config: database.Config{
 				DatabaseUrl:  viper.GetString("DATABASE_URL"),
 				DatabaseName: viper.GetString("DATABASE_NAME"),

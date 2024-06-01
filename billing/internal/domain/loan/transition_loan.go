@@ -132,7 +132,7 @@ func createNewLoan(b context.Backdrop, loan *models.Loan, configurationId *int) 
 	if loan.DisplayId, err = helpers.CreateUniqueDisplayId(models.Loan{
 		Customer:   &models.Customer{DisplayId: loan.DisplayId, ID: loan.Customer.ID},
 		LoanConfig: &models.LoanConfig{Id: loan.LoanConfig.Id},
-	}, constants.LOAN_PREFIX); err != nil {
+	}, constants.LoanPrefix); err != nil {
 		return nil, err
 	}
 	err = loan_repository.Update(b, loan)
@@ -183,7 +183,7 @@ func attachNewLoanAccount(b context.Backdrop, loan *models.Loan) (*domainmodels.
 			Customer:   &models.Customer{DisplayId: loan.DisplayId, ID: loan.Customer.ID},
 			LoanConfig: &models.LoanConfig{Id: loan.LoanConfig.Id},
 		},
-	}, constants.LOAN_ACCOUNT_PREFIX); err != nil {
+	}, constants.LoanAccountPrefix); err != nil {
 		return nil, err
 	}
 	if err = loan_account_repository.Update(b, loanAccount); err != nil {

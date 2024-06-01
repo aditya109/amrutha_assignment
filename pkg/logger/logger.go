@@ -90,21 +90,21 @@ type GormLogger struct {
 }
 
 // Error implements logger.Interface.
-func (g GormLogger) Error(c context.Context, msg string, data ...interface{}) {
+func (g GormLogger) Error(_ context.Context, msg string, data ...interface{}) {
 	g.L.WithFields(logrus.Fields{
 		"trace_id": g.Meta[0].(string),
 	}).Warn(msg, data)
 }
 
 // Info implements logger.Interface.
-func (g GormLogger) Info(c context.Context, msg string, data ...interface{}) {
+func (g GormLogger) Info(_ context.Context, msg string, data ...interface{}) {
 	g.L.WithFields(logrus.Fields{
 		"trace_id": g.Meta[0].(string),
 	}).Info(msg, data)
 }
 
 // LogMode implements logger.Interface.
-func (g *GormLogger) LogMode(l logger.LogLevel) logger.Interface {
+func (g GormLogger) LogMode(l logger.LogLevel) logger.Interface {
 	g.L.SetLevel(logLevelToLogrusLevel(l))
 	return g
 }

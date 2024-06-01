@@ -27,7 +27,7 @@ func (i InputForGetOutstandingAmount) GetOutstanding(b context.Backdrop) (*Outpu
 		}
 		return &Output{
 			OutstandingAmount: helpers.FormatCurrency(outstandingAmount),
-			Message:           fmt.Sprintf("loan account id: %s has outstanding of %s", loanAccount.DisplayId, outstandingAmount),
+			Message:           fmt.Sprintf("loan account id: %s has outstanding of %s", loanAccount.DisplayId, helpers.FormatCurrency(outstandingAmount)),
 		}, nil
 	}
 }

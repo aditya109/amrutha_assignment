@@ -74,7 +74,7 @@ func (c MakePaymentInputConstruct) MakePayment(b context.Backdrop) (*domainmodel
 				LoanAccountId:                payment.LoanAccountId,
 				ClientTransactionReferenceId: payment.ClientTransactionReferenceId,
 				DateOfTransaction:            payment.DateOfTransaction,
-			}, constants.PAYMENT_PREFIX); err != nil {
+			}, constants.PaymentPrefix); err != nil {
 				return nil, err
 			}
 

@@ -1,12 +1,10 @@
 package helpers
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"github.com/aditya109/amrutha_assignment/billing/pkg/constants"
-	"github.com/aditya109/amrutha_assignment/pkg/logger"
 	"github.com/aditya109/atomic"
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -14,11 +12,8 @@ import (
 	"golang.org/x/text/message"
 	"golang.org/x/text/number"
 	"log"
-	"reflect"
-	"strconv"
 	"strings"
 	"time"
-	"unicode"
 )
 
 func CreatePointerForValue[T any](v T) *T {
@@ -39,27 +34,6 @@ func FormatCurrency(value decimal.Decimal) string {
 	return printer.Sprintf(format, num)
 }
 
-func GetDateFromString(input string, formats ...string) string {
-	var incomingDateFormat = time.RFC3339Nano
-	var outputDateFormat = "02 Jan 2006 03:04 PM"
-	switch len(formats) {
-	case 1:
-		if formats[0] != "" {
-			incomingDateFormat = formats[0]
-		}
-	case 2:
-		if formats[0] != "" {
-			incomingDateFormat = formats[0]
-		}
-		if formats[1] != "" {
-			outputDateFormat = formats[1]
-		}
-	}
-	t, _ := time.Parse(incomingDateFormat, input)
-
-	return t.Format(outputDateFormat)
-}
-
 func GetDateAsTimeFromString(input string, formats ...string) time.Time {
 	var incomingDateFormat = time.RFC3339Nano
 	switch len(formats) {
@@ -75,106 +49,6 @@ func GetDateAsTimeFromString(input string, formats ...string) time.Time {
 	t, _ := time.Parse(incomingDateFormat, input)
 
 	return t
-}
-
-func BytesToMapStringInterface(bytes []byte) (map[string]interface{}, error) {
-	var target map[string]interface{}
-
-	err := json.Unmarshal(bytes, &target)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return target, err
-}
-
-func PayloadToMapStringInterface(payload interface{}) (map[string]interface{}, error) {
-
-	var finalPayload map[string]interface{}
-
-	payloadBytes, err := json.Marshal(&payload)
-	if err != nil {
-		return map[string]interface{}{}, err
-	}
-
-	err = json.Unmarshal(payloadBytes, &finalPayload)
-	if err != nil {
-		return map[string]interface{}{}, err
-	}
-
-	return finalPayload, nil
-}
-
-func BytesToStruct[T any](data []byte) (T, error) {
-	var realData T
-
-	// unmarshal bytes to real data
-	err := json.Unmarshal(data, &realData)
-	if err != nil {
-		return realData, fmt.Errorf("error while processing bytes to struct: %v", err)
-	}
-
-	return realData, nil
-}
-func InterfaceToStruct[T any](data interface{}) (T, error) {
-	var realData T
-
-	bytes, err := ConvertStructIntoBytesArray(data)
-	if err != nil {
-		return realData, err
-	}
-
-	return BytesToStruct[T](bytes)
-}
-
-func GetPrettyPrintJsonStringFromStruct(ob any) string {
-	b, err := json.MarshalIndent(ob, "", "  ")
-	if err != nil {
-		log.Println(err)
-	}
-	return string(b)
-}
-
-func GetJsonStringFromStruct(ob any) (string, error) {
-	b, err := json.Marshal(ob)
-	if err != nil {
-		return "", fmt.Errorf("error encoding JSON: %v", err)
-	}
-	return string(b), nil
-}
-
-func StructToBytes(ob any) []byte {
-	return []byte(fmt.Sprintf("%v", ob))
-}
-
-func StringConvertToInt(val string) (int, error) {
-	if i, err := strconv.Atoi(strings.Split(val, ".")[0]); err == nil {
-		return int(i), nil
-	} else {
-		return -1, fmt.Errorf("error while converting to int: %s", val)
-	}
-}
-
-func StringConvertToFloat64(val string) float64 {
-	log := logger.GetInternalContextLogger(StringConvertToFloat64)
-	if i, err := strconv.ParseFloat(val, 64); err == nil {
-		return i
-	} else {
-		log.Fatalf("error while converting to int: %s", val)
-	}
-	return -1
-}
-
-func BytesToJson(data []byte) (map[string]interface{}, error) {
-	var finalData map[string]interface{}
-	err := json.Unmarshal(data, &finalData)
-	return finalData, err
-}
-
-func PrintBytesBufferToString(buf *bytes.Buffer) {
-	log := logger.GetInternalContextLogger(PrintBytesBufferToString)
-	log.Println(buf.String())
 }
 
 func ConvertStructIntoHashString(ob any) (string, error) {
@@ -199,80 +73,6 @@ func ConvertStructIntoBytesArray(a any) ([]byte, error) {
 	return bytes, nil
 }
 
-func ConvertToMap(obj interface{}, enableSnakeCasingForKey bool) (map[string][]string, error) {
-	// Initialize an empty map to hold the converted values
-	convertedMap := make(map[string][]string)
-
-	// Get the type of the object
-	objType := reflect.TypeOf(obj)
-
-	// Ensure the object is a struct
-	if objType.Kind() != reflect.Struct {
-		return nil, fmt.Errorf("input object is not a struct")
-	}
-
-	// Get the value of the object
-	objValue := reflect.ValueOf(obj)
-
-	// Iterate through the fields of the struct
-	for i := 0; i < objType.NumField(); i++ {
-		field := objType.Field(i)
-		fieldValue := objValue.Field(i)
-
-		// Convert field value to string
-		var stringValue string
-		switch fieldValue.Kind() {
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			stringValue = strconv.FormatInt(fieldValue.Int(), 10)
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			stringValue = strconv.FormatUint(fieldValue.Uint(), 10)
-		case reflect.Float32:
-			stringValue = strconv.FormatFloat(fieldValue.Float(), 'f', -1, 32)
-		case reflect.Float64:
-			stringValue = strconv.FormatFloat(fieldValue.Float(), 'f', -1, 64)
-		case reflect.Bool:
-			stringValue = strconv.FormatBool(fieldValue.Bool())
-		case reflect.String:
-			stringValue = fieldValue.String()
-		// Handle other types
-		default:
-			stringValue = fmt.Sprintf("%v", fieldValue.Interface())
-		}
-
-		// Store the field name and converted value in the map
-		if enableSnakeCasingForKey {
-			convertedMap[ToLowerSnakeCase(field.Name)] = []string{stringValue}
-		} else {
-			convertedMap[field.Name] = []string{stringValue}
-		}
-	}
-
-	return convertedMap, nil
-}
-
-func ToLowerSnakeCase(input string) string {
-	var buf bytes.Buffer
-	buf.Grow(len(input) * 2)
-
-	// Iterate over each character in the input string
-	for i, r := range input {
-		if unicode.IsUpper(r) {
-			// If the character is uppercase and not the first character,
-			// insert an underscore before it
-			if i != 0 {
-				buf.WriteByte('_')
-			}
-			// Convert the uppercase character to lowercase
-			buf.WriteRune(unicode.ToLower(r))
-		} else {
-			// If the character is not uppercase, just append it
-			buf.WriteRune(r)
-		}
-	}
-
-	return buf.String()
-}
-
 func PrintLandingRequestCurl(c *gin.Context) {
 	curl, err := atomic.Boom(c.Request)
 	if err != nil {
@@ -283,7 +83,7 @@ func PrintLandingRequestCurl(c *gin.Context) {
 
 func getTraceId(c *gin.Context) string {
 	if c != nil {
-		return c.Request.Header.Get(constants.APPLICATION_TRACE_KEY)
+		return c.Request.Header.Get(constants.ApplicationTraceKey)
 	}
 	return ""
 }

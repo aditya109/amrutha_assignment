@@ -9,7 +9,7 @@ import (
 	"net/http"
 )
 
-func AcquireHttpServer(module ApiModule, serviceTag string) (*http.Server, string) {
+func AcquireHttpServer(module Module, serviceTag string) (*http.Server, string) {
 	var srv *http.Server
 
 	PORT := viper.GetString("SERVER_PORT")
@@ -35,7 +35,7 @@ func AcquireHttpServer(module ApiModule, serviceTag string) (*http.Server, strin
 }
 
 type construct struct {
-	module    ApiModule
+	module    Module
 	routes    []Route
 	apiRouter *gin.RouterGroup
 }

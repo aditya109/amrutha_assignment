@@ -10,7 +10,7 @@ type Route struct {
 	PostMiddlewares []gin.HandlerFunc
 }
 
-type ApiModule struct {
+type Module struct {
 	Module     string
 	ApiVersion string
 	Routes     []Route

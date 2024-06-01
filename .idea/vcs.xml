@@ -2,5 +2,10 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
+    <mapping directory="D:/Work/src/github.com/aditya109/greenlight" vcs="Git" />
+    <mapping directory="D:/Work/src/github.com/aditya109/journey-aws-cloud-architect" vcs="Git" />
+    <mapping directory="D:/Work/src/github.com/aditya109/learning-rust" vcs="Git" />
+    <mapping directory="D:/Work/src/github.com/aditya109/library-system" vcs="Git" />
+    <mapping directory="D:/Work/src/github.com/aditya109/software-engineering-interview-rampup" vcs="Git" />
   </component>
 </project>

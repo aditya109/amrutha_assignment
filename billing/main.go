@@ -17,17 +17,17 @@ import (
 )
 
 func init() {
-	appinit.InitializeApplication(constants.SERVICE_IDENTIFIER)
+	appinit.InitializeApplication(constants.ServiceIdentifier)
 }
 
 func main() {
 	log := logger.GetSupportContextLogger(main)
 
 	// starting server
-	srv, port := api.AcquireHttpServer(modules.GetModule(), constants.SERVICE_IDENTIFIER)
+	srv, port := api.AcquireHttpServer(modules.GetModule(), constants.ServiceIdentifier)
 
 	go func() {
-		log.Printf("%s server running on port - %s", strings.ToLower(constants.SERVICE_IDENTIFIER), port)
+		log.Printf("%s server running on port - %s", strings.ToLower(constants.ServiceIdentifier), port)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("server start failed: %s\n", err)
 		}
@@ -38,7 +38,7 @@ func main() {
 	<-quit
 	log.Println("[SERVER] stopped")
 
-	var serverShutdownTimeout time.Duration = 1 * time.Second
+	var serverShutdownTimeout = 1 * time.Second
 
 	ctx, cancel := context.WithTimeout(context.Background(), serverShutdownTimeout)
 	defer cancel()

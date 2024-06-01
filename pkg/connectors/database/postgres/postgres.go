@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/aditya109/amrutha_assignment/pkg/connectors/database"
 	"github.com/aditya109/amrutha_assignment/pkg/context"
@@ -12,12 +13,12 @@ import (
 	"gorm.io/gorm/schema"
 )
 
-type PostgresConstruct struct {
+type Construct struct {
 	Config database.Config
 	dB     *gorm.DB
 }
 
-func (construct *PostgresConstruct) Connect() error {
+func (construct *Construct) Connect() error {
 	var db *gorm.DB
 	var err error
 	log := appLogger.GetSupportContextLogger(construct.Connect)
@@ -37,21 +38,23 @@ func (construct *PostgresConstruct) Connect() error {
 	return nil
 }
 
-func (construct *PostgresConstruct) Close() error {
+func (construct *Construct) Close() error {
 	log := appLogger.GetSupportContextLogger(construct.Connect)
 	if connection, err := construct.dB.DB(); err != nil {
 		log.Printf("error while getting connection from db instance, err: %v", err)
 	} else {
-		defer connection.Close()
+		defer func(connection *sql.DB) {
+			_ = connection.Close()
+		}(connection)
 	}
 	return nil
 }
 
-func (construct *PostgresConstruct) instantiateDbInstance(db *gorm.DB) {
+func (construct *Construct) instantiateDbInstance(db *gorm.DB) {
 	construct.dB = db
 }
 
-func (construct *PostgresConstruct) GetDbInstance() *gorm.DB {
+func (construct *Construct) GetDbInstance() *gorm.DB {
 	return construct.dB
 }
 

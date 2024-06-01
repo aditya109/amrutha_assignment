@@ -1,17 +1,19 @@
 package models
 
+//goland:noinspection ALL
 const (
-	BAD_REQUEST_NAME                       = "BAD_REQUEST"
-	INTERNAL_SERVER_ERROR_NAME             = "INTERNAL_SERVER_ERROR"
-	URL_PARAMETER_VALIDATION_FAILED_NAME   = "URL_PARAMETER_VALIDATION_FAILED"
-	QUERY_PARAMETER_VALIDATION_FAILED_NAME = "QUERY_PARAMETER_VALIDATION_FAILED"
+	BadRequestName                     = "BAD_REQUEST"
+	InternalServerErrorName            = "INTERNAL_SERVER_ERROR"
+	UrlParameterValidationFailedName   = "URL_PARAMETER_VALIDATION_FAILED"
+	QueryParameterValidationFailedName = "QUERY_PARAMETER_VALIDATION_FAILED"
 )
 
+//goland:noinspection ALL
 const (
-	BAD_REQUEST_MESSAGE_MESSAGE               = "Bad Request"
-	INTERNAL_SERVER_ERROR_MESSAGE             = "Something Went Wrong"
-	URL_PARAMETER_VALIDATION_FAILED_MESSAGE   = "URL Parameter Validation Failed"
-	QUERY_PARAMETER_VALIDATION_FAILED_MESSAGE = " Query Parameter Validation Failed"
+	BadRequestMessageMessage              = "Bad Request"
+	InternalServerErrorMessage            = "Something Went Wrong"
+	UrlParameterValidationFailedMessage   = "URL Parameter Validation Failed"
+	QueryParameterValidationFailedMessage = " Query Parameter Validation Failed"
 )
 
 type Response struct {
@@ -58,7 +60,7 @@ func ErrorResponse(error Error) FailureResponse {
 }
 
 func InternalServerError(e *Error) FailureResponse {
-	MESSAGE := INTERNAL_SERVER_ERROR_MESSAGE
+	MESSAGE := InternalServerErrorMessage
 
 	{
 		if e.Message != "" {

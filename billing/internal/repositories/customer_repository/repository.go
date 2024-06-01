@@ -39,23 +39,6 @@ func FindOne(b context.Backdrop, customer *models.Customer) error {
 	}
 }
 
-func FindAllActiveCustomers(b context.Backdrop, ids []string) ([]models.Customer, error) {
-	db := b.GetDatabaseInstance()
-	var customers []models.Customer
-	db = db.Where("is_active = ?", true)
-	if len(ids) > 0 {
-		db = db.Where("id IN ?", ids)
-	}
-
-	if result := db.Find(&customers); result.Error == nil {
-		return customers, nil
-	} else if !errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, fmt.Errorf("error occured while looking for customer with active loans")
-	} else {
-		return nil, fmt.Errorf("customer with active loans not found")
-	}
-}
-
 func Update(b context.Backdrop, customer *models.Customer) error {
 	db := b.GetDatabaseInstance()
 	if err := postgres.ExecuteTransaction(b, db.Save(customer)); err != nil {

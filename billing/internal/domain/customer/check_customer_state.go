@@ -13,13 +13,13 @@ type InputForCheckCustomerState struct {
 	CustomerId string
 }
 
-type output struct {
+type Output struct {
 	Message *string `json:"message"`
 }
 
-func (i InputForCheckCustomerState) IsDelinquent(b context.Backdrop) (*output, error) {
+func (i InputForCheckCustomerState) IsDelinquent(b context.Backdrop) (*Output, error) {
 	var existingCustomer = &models.Customer{DisplayId: i.CustomerId}
-	var output = output{}
+	var output = Output{}
 	var err error
 
 	if err = customer_repository.FindOne(b, existingCustomer); err != nil {

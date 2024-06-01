@@ -1,21 +1,20 @@
 package constants
 
 const (
-	SERVICE_IDENTIFIER    = "billing"
-	APPLICATION_TRACE_KEY = "x-app-trace-id"
+	ServiceIdentifier   = "billing"
+	ApplicationTraceKey = "x-app-trace-id"
 
-	SOMETHING_WENT_WRONG           = "something went wrong"
-	GENERIC_ERROR_MESSAGE          = "Uh-Oh! Something went wrong."
-	REQUEST_BODY_VALIDATION_FAILED = "validation for input payload"
-	RESOURCE_NOT_FOUND_MESSAGE     = "requested resource is not found"
-	METHOD_NOT_ALLOWED_MESSAGE     = "used request method is not supported for resource"
-	VALIDATION_FAILED              = "validation failed"
-	INTERNAL_SERVER_ERROR          = "internal server error"
+	GenericErrorMessage         = "Uh-Oh! Something went wrong."
+	RequestBodyValidationFailed = "validation for input payload"
+	ResourceNotFoundMessage     = "requested resource is not found"
+	MethodNotAllowedMessage     = "used request method is not supported for resource"
+	ValidationFailed            = "validation failed"
 )
 
+//goland:noinspection SpellCheckingInspection,SpellCheckingInspection
 const (
-	CUSTOMER_PREFIX     = "CUST"
-	LOAN_PREFIX         = "LN"
-	LOAN_ACCOUNT_PREFIX = "LNAC"
-	PAYMENT_PREFIX      = "PAY"
+	CustomerPrefix    = "CUST"
+	LoanPrefix        = "LN"
+	LoanAccountPrefix = "LNAC"
+	PaymentPrefix     = "PAY"
 )
