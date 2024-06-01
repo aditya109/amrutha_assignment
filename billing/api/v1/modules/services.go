@@ -3,6 +3,7 @@ package modules
 import (
 	"github.com/aditya109/amrutha_assignment/billing/internal/domain/customer"
 	"github.com/aditya109/amrutha_assignment/billing/internal/domain/loan"
+	"github.com/aditya109/amrutha_assignment/billing/internal/domain/loan_account"
 	"github.com/aditya109/amrutha_assignment/billing/internal/domain/payment"
 	"github.com/aditya109/amrutha_assignment/pkg/context"
 )
@@ -28,4 +29,16 @@ func makePaymentService(b context.Backdrop, body MakePaymentRequestDto) (interfa
 		DateOfTransaction:      body.DateOfTransaction,
 		TransactionReferenceId: body.TransactionReferenceId,
 	}.MakePayment(b)
+}
+
+func getCustomerStateForDelinquencyService(b context.Backdrop, customerId string) (interface{}, error) {
+	return customer.InputForCheckCustomerState{
+		CustomerId: customerId,
+	}.IsDelinquent(b)
+}
+
+func getOutstandingAmountForDelinquencyService(b context.Backdrop, customerId string) (interface{}, error) {
+	return loan_account.InputForGetOutstandingAmount{
+		CustomerId: customerId,
+	}.GetOutstanding(b)
 }

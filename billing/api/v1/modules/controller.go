@@ -9,10 +9,33 @@ import (
 )
 
 func GetOutstandingAmountForCustomerController(b context.Backdrop) {
+	customerId := b.GetContext().Param("customerId")
+	if result, err := getOutstandingAmountForDelinquencyService(b, customerId); err != nil {
+		b.Error(http.StatusInternalServerError, models.Error{
+			Code:              models.INTERNAL_SERVER_ERROR_MESSAGE,
+			Message:           constants.GENERIC_ERROR_MESSAGE,
+			ResolutionMessage: fmt.Errorf("err: %v", err).Error(),
+			Data:              nil,
+		})
+		return
+	} else {
+		b.Response(http.StatusOK, result)
+	}
 }
 
-func GetCustomerStateForDeliquencyRoute(b context.Backdrop) {
-
+func GetCustomerStateForDelinquencyRoute(b context.Backdrop) {
+	customerId := b.GetContext().Param("customerId")
+	if result, err := getCustomerStateForDelinquencyService(b, customerId); err != nil {
+		b.Error(http.StatusInternalServerError, models.Error{
+			Code:              models.INTERNAL_SERVER_ERROR_MESSAGE,
+			Message:           constants.GENERIC_ERROR_MESSAGE,
+			ResolutionMessage: fmt.Errorf("err: %v", err).Error(),
+			Data:              nil,
+		})
+		return
+	} else {
+		b.Response(http.StatusOK, result)
+	}
 }
 
 func MakePaymentController(b context.Backdrop) {

@@ -49,3 +49,31 @@ func FindAllUnpaidSchedules(b context.Backdrop, customerDisplayIds []string, dat
 
 	return unpaidSchedules, nil
 }
+
+func FindAllDefaultedSchedules(b context.Backdrop, customerDisplayIds []string, date string) ([]models.BillingScheduleCombinedInfo, error) {
+	db := b.GetDatabaseInstance()
+	var defaultedSchedules []models.BillingScheduleCombinedInfo
+
+	var query = db.
+		Table("billing.billing_schedules as bs").
+		Joins("join billing.loan_accounts as la on la.id = bs.loan_account_id").
+		Joins("join billing.loans as l on l.id = la.loan_id").
+		Joins("join billing.customers as cs on cs.id = l.customer_id").
+		Select(" bs.id, bs.created_at, bs.updated_at, bs.loan_account_id, bs.start_date, bs.end_date, bs.week_count, bs.installment_amount, cs.display_id as customer_display_id,l.display_id as loan_display_id, cs.is_active as is_customer_active, l.loan_state as loan_state, l.id as loan_id, cs.id as customer_id").
+		Where("bs.is_default", true).Or("bs.end_date < ?", date).
+		Where("l.loan_state", "ACTIVE").
+		Where("cs.is_active", true)
+
+	if len(customerDisplayIds) > 0 {
+		query = query.Where("cs.display_id IN (?)", customerDisplayIds)
+	}
+
+	if len(date) > 0 {
+		query = query.Where("bs.end_date < ?", date)
+	}
+
+	if err := query.Find(&defaultedSchedules).Error; err != nil {
+	}
+
+	return defaultedSchedules, nil
+}

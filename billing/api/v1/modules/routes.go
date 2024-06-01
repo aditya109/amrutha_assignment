@@ -27,7 +27,7 @@ func GetModule() api.ApiModule {
 			{
 				Path:       getCustomerStateForDeliquencyRoute,
 				Method:     http.MethodGet,
-				Controller: api.WrapHighOrderControl(GetCustomerStateForDeliquencyRoute),
+				Controller: api.WrapHighOrderControl(GetCustomerStateForDelinquencyRoute),
 			},
 			{
 				Path:       postMakePaymentRoute,

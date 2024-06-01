@@ -2,6 +2,7 @@ package loan
 
 import (
 	"fmt"
+	domainmodels "github.com/aditya109/amrutha_assignment/billing/internal/domain/models"
 	interestcalculationrules "github.com/aditya109/amrutha_assignment/billing/internal/domain/rules/interest_calculation"
 	"github.com/aditya109/amrutha_assignment/billing/internal/models"
 	"github.com/aditya109/amrutha_assignment/billing/internal/repositories/billing_schedule_repository"
@@ -22,14 +23,7 @@ type TransitionLoanConstruct struct {
 	ConfigurationId *int
 }
 
-type Output struct {
-	Loan            *models.Loan            `json:"loan,omitempty"`
-	LoanAccount     *models.LoanAccount     `json:"loanAccount,omitempty"`
-	NearestSchedule *models.BillingSchedule `json:"nearestSchedule,omitempty"`
-	Customer        *models.Customer        `json:"customer,omitempty"`
-}
-
-func (c TransitionLoanConstruct) TransitionLoan(b context.Backdrop) (*Output, error) {
+func (c TransitionLoanConstruct) TransitionLoan(b context.Backdrop) (*domainmodels.Output, error) {
 	var loan = &models.Loan{
 		Customer: &models.Customer{DisplayId: c.CustomerId},
 	}
@@ -122,7 +116,7 @@ func (c TransitionLoanConstruct) TransitionLoan(b context.Backdrop) (*Output, er
 	return nil, nil
 }
 
-func createNewLoan(b context.Backdrop, loan *models.Loan, configurationId *int) (*Output, error) {
+func createNewLoan(b context.Backdrop, loan *models.Loan, configurationId *int) (*domainmodels.Output, error) {
 	var loanConfig = &models.LoanConfig{}
 	var err error
 	if configurationId == nil {
@@ -145,7 +139,7 @@ func createNewLoan(b context.Backdrop, loan *models.Loan, configurationId *int) 
 	if err != nil {
 		return nil, err
 	}
-	return &Output{
+	return &domainmodels.Output{
 		Loan: &models.Loan{
 			DisplayId:              loan.DisplayId,
 			LoanState:              loan.LoanState,
@@ -162,7 +156,7 @@ func createNewLoan(b context.Backdrop, loan *models.Loan, configurationId *int) 
 	}, nil
 }
 
-func attachNewLoanAccount(b context.Backdrop, loan *models.Loan) (*Output, error) {
+func attachNewLoanAccount(b context.Backdrop, loan *models.Loan) (*domainmodels.Output, error) {
 	var loanConfig = loan.LoanConfig
 	var construct *interestcalculationrules.ResultantConstructForLoanAccount
 	var err error
@@ -209,7 +203,7 @@ func attachNewLoanAccount(b context.Backdrop, loan *models.Loan) (*Output, error
 	if err = billing_schedule_repository.Save(b, nearestSchedule); err != nil {
 		return nil, fmt.Errorf("error while updating loan schedule: %v", err)
 	}
-	return &Output{
+	return &domainmodels.Output{
 
 		LoanAccount: &models.LoanAccount{
 			PayablePrincipalAmount: helpers.FormatCurrency(construct.PayablePrincipalAmount),

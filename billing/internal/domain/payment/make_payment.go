@@ -2,6 +2,7 @@ package payment
 
 import (
 	"fmt"
+	domainmodels "github.com/aditya109/amrutha_assignment/billing/internal/domain/models"
 	"github.com/aditya109/amrutha_assignment/billing/internal/models"
 	"github.com/aditya109/amrutha_assignment/billing/internal/repositories/billing_schedule_repository"
 	"github.com/aditya109/amrutha_assignment/billing/internal/repositories/customer_repository"
@@ -23,9 +24,14 @@ type MakePaymentInputConstruct struct {
 }
 
 // MakePayment Due to lack of time, I wrote the entire logic as a part of API core, ideally it ought to be run with an asynchronous function commanded by Kafka messages published within this API.
-func (c MakePaymentInputConstruct) MakePayment(b context.Backdrop) (*models.Payment, error) {
+func (c MakePaymentInputConstruct) MakePayment(b context.Backdrop) (*domainmodels.Output, error) {
 	var payment *models.Payment
+	var existingCustomer = &models.Customer{DisplayId: c.CustomerId}
+	var err error
 
+	if err = customer_repository.FindOne(b, existingCustomer); err != nil {
+		return nil, err
+	}
 	unpaidSchedules, err := billing_schedule_repository.FindAllUnpaidSchedules(b, []string{c.CustomerId}, "")
 	if err != nil {
 		return nil, err
@@ -90,6 +96,11 @@ func (c MakePaymentInputConstruct) MakePayment(b context.Backdrop) (*models.Paym
 				return nil, fmt.Errorf("cannot convert outstanding amount to decimal, err: %v", err)
 			}
 
+			installmentAmount, err := decimal.NewFromString(payment.LoanAccount.InstallmentAmount)
+			if err != nil {
+				return nil, fmt.Errorf("cannot convert installment amount to decimal, err: %v", err)
+			}
+
 			loanAccount.TotalPaidAmount = totalPaidAmount.Add(paidAmount).Round(2).StringFixed(2)
 			loanAccount.OutstandingAmount = outstandingAmount.Sub(paidAmount).Round(2).StringFixed(2)
 			var shouldIncrementMissedPaymentCount bool
@@ -104,8 +115,14 @@ func (c MakePaymentInputConstruct) MakePayment(b context.Backdrop) (*models.Paym
 			if err := loan_account_repository.Update(b, loanAccount); err != nil {
 				return nil, err
 			}
+			if err := loan_account_repository.FindOne(b, loanAccount); err != nil {
+				return nil, err
+			}
 			var loan = &models.Loan{Id: unpaidSchedules[0].LoanId}
 			if err := loan_repository.UpdateAfterPayment(b, loan, shouldIncrementMissedPaymentCount); err != nil {
+				return nil, err
+			}
+			if err := loan_repository.FindOne(b, loan); err != nil {
 				return nil, err
 			}
 
@@ -137,8 +154,40 @@ func (c MakePaymentInputConstruct) MakePayment(b context.Backdrop) (*models.Paym
 					return nil, err
 				}
 			}
+			return &domainmodels.Output{
+				LoanAccount: &models.LoanAccount{
+					TotalPaidAmount:   helpers.FormatCurrency(totalPaidAmount),
+					OutstandingAmount: helpers.FormatCurrency(outstandingAmount),
+					DisplayId:         loanAccount.DisplayId,
+				},
+				NextBillingSchedule: &models.BillingSchedule{
+					StartDate:         nextSchedule.StartDate,
+					EndDate:           nextSchedule.EndDate,
+					WeekCount:         nextSchedule.WeekCount,
+					InstallmentAmount: helpers.FormatCurrency(installmentAmount),
+				},
+				Loan: &models.Loan{
+					DisplayId:              loan.DisplayId,
+					LoanState:              loan.LoanState,
+					MissedPaymentCount:     loan.MissedPaymentCount,
+					PaymentCompletionCount: loan.PaymentCompletionCount,
+				},
+				Customer: &models.Customer{
+					Name:      existingCustomer.Name,
+					Address:   existingCustomer.Address,
+					IsActive:  existingCustomer.IsActive,
+					Type:      existingCustomer.Type,
+					DisplayId: existingCustomer.DisplayId,
+				},
+				Payment: &models.Payment{
+					PaidAmount:                   helpers.FormatCurrency(paidAmount),
+					PaymentDisplayId:             payment.PaymentDisplayId,
+					ClientTransactionReferenceId: payment.ClientTransactionReferenceId,
+					DateOfTransaction:            payment.DateOfTransaction,
+				},
+			}, nil
 		}
-
+	default:
+		return nil, fmt.Errorf("unhandled payment operation")
 	}
-	return payment, nil
 }

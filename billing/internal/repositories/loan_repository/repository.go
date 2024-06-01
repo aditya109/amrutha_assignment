@@ -12,7 +12,7 @@ import (
 func FindOne(b context.Backdrop, loan *models.Loan) error {
 	db := b.GetDatabaseInstance()
 
-	if result := db.Where(models.Loan{Customer: &models.Customer{DisplayId: loan.Customer.DisplayId}}).First(&loan); result.Error == nil {
+	if result := db.Where(loan).First(&loan); result.Error == nil {
 		return nil
 	} else if !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return fmt.Errorf("error occured while looking for customer with id %v", loan.DisplayId)
