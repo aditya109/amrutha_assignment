@@ -51,34 +51,20 @@ create table if not exists billing.loans(
     foreign key (customer_id) references billing.customers(id)
 );
 
-create table if not exists billing.payments(
+create table if not exists billing.loan_accounts(
     id serial primary key,
     created_at timestamp default now(),
     updated_at timestamp default now(),
-    loan_account_id int not null,
-    customer_id int not null,
-    paid_amount varchar not null,
-    is_accepted boolean not null default false,
-    date_of_transaction timestamp not null,
-    client_transaction_reference_id varchar not null,
-    payment_id varchar(20) not null,
-    foreign key (loan_account_id) references billing.loan_accounts(id),
-    foreign key (customer_id) references billing.customers(id)
+    loan_id int not null,
+    payable_principal_amount varchar not null,
+    accrued_interest varchar not null,
+    total_payable_amount varchar not null,
+    total_paid_amount varchar not null,
+    outstanding_amount varchar not null,
+    installment_amount varchar not null,
+    foreign key (loan_id) references billing.loans(id)
 );
 
-create table if not exists billing.loan_accounts(
-   id serial primary key,
-   created_at timestamp default now(),
-   updated_at timestamp default now(),
-   loan_id int not null,
-   payable_principal_amount varchar not null,
-   accrued_interest varchar not null,
-   total_payable_amount varchar not null,
-   total_paid_amount varchar not null,
-   outstanding_amount varchar not null,
-   installment_amount varchar not null,
-   foreign key (loan_id) references billing.loans(id)
-);
 
 create table if not exists billing.billing_schedules(
     id serial primary key,
@@ -89,14 +75,32 @@ create table if not exists billing.billing_schedules(
     start_date timestamp not null,
     end_date timestamp not null,
     week_count int not null,
+    is_default boolean not null default false,
+    is_payment_done boolean not null default false,
     foreign key (loan_account_id) references billing.loan_accounts(id)
 );
 
+create table if not exists billing.payments(
+    id serial primary key,
+    created_at timestamp default now(),
+    updated_at timestamp default now(),
+    loan_account_id int not null,
+    customer_id int not null,
+    paid_amount varchar not null,
+    is_accepted boolean not null default false,
+    date_of_transaction timestamp not null,
+    client_transaction_reference_id varchar not null,
+    payment_display_id varchar(20) not null,
+    schedule_id int not null,
+    foreign key (loan_account_id) references billing.loan_accounts(id),
+    foreign key (customer_id) references billing.customers(id),
+    foreign key (schedule_id) references billing.billing_schedules(id)
+);
 
 
 create index if not exists idx_load_id on billing.loan_accounts(loan_id);
 create index if not exists idx_loan_account_id on billing.billing_schedules(loan_account_id);
-create index if not exists idx_load_id on billing.payments(loan_id);
+create index if not exists idx_load_account_id on billing.payments(loan_account_id);
 create index if not exists idx_customer_id on billing.payments(customer_id);
 create index if not exists idx_customer_id on billing.loans(customer_id);
 

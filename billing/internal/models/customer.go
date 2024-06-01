@@ -5,7 +5,7 @@ import (
 )
 
 type Customer struct {
-	ID        uint          `gorm:"column:id;primaryKey" json:"id,omitempty" `
+	ID        uint          `gorm:"column:id;primaryKey" json:"id,omitempty"`
 	Name      string        `gorm:"column:name" json:"name"`
 	Address   string        `gorm:"column:address" json:"address"`
 	CreatedAt *time.Time    `gorm:"column:created_at" json:"createdAt,omitempty"`

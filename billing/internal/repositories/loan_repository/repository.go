@@ -45,3 +45,20 @@ func Update(b context.Backdrop, loan *models.Loan) error {
 	}
 	return nil
 }
+
+func UpdateAfterPayment(b context.Backdrop, loan *models.Loan, shouldIncrementMissedPaymentCount bool) error {
+	db := b.GetDatabaseInstance()
+	var updateCols = make(map[string]interface{})
+	updateCols["payment_completion_count"] = gorm.Expr("payment_completion_count + ?", 1)
+	if shouldIncrementMissedPaymentCount {
+		updateCols["missed_payment_count"] = gorm.Expr("missed_payment_count + ?", 1)
+	}
+	var query = db.
+		Model(loan).
+		Updates(updateCols)
+
+	if err := postgres.ExecuteTransaction(b, query); err != nil {
+		return fmt.Errorf("failed to update loan: %w", err)
+	}
+	return nil
+}

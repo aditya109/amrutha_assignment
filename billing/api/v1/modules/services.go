@@ -3,6 +3,7 @@ package modules
 import (
 	"github.com/aditya109/amrutha_assignment/billing/internal/domain/customer"
 	"github.com/aditya109/amrutha_assignment/billing/internal/domain/loan"
+	"github.com/aditya109/amrutha_assignment/billing/internal/domain/payment"
 	"github.com/aditya109/amrutha_assignment/pkg/context"
 )
 
@@ -21,7 +22,10 @@ func transitionLoanService(b context.Backdrop, body TransitionLoanRequestDto) (i
 }
 
 func makePaymentService(b context.Backdrop, body MakePaymentRequestDto) (interface{}, error) {
-	return loan.TransitionLoanConstruct{
-		CustomerId: body.CustomerId,
-	}.TransitionLoan(b)
+	return payment.MakePaymentInputConstruct{
+		CustomerId:             body.CustomerId,
+		Amount:                 body.Amount,
+		DateOfTransaction:      body.DateOfTransaction,
+		TransactionReferenceId: body.TransactionReferenceId,
+	}.MakePayment(b)
 }

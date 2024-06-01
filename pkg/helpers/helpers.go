@@ -60,6 +60,23 @@ func GetDateFromString(input string, formats ...string) string {
 	return t.Format(outputDateFormat)
 }
 
+func GetDateAsTimeFromString(input string, formats ...string) time.Time {
+	var incomingDateFormat = time.RFC3339Nano
+	switch len(formats) {
+	case 1:
+		if formats[0] != "" {
+			incomingDateFormat = formats[0]
+		}
+	case 2:
+		if formats[0] != "" {
+			incomingDateFormat = formats[0]
+		}
+	}
+	t, _ := time.Parse(incomingDateFormat, input)
+
+	return t
+}
+
 func BytesToMapStringInterface(bytes []byte) (map[string]interface{}, error) {
 	var target map[string]interface{}
 

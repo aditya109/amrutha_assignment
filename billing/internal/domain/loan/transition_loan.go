@@ -2,7 +2,7 @@ package loan
 
 import (
 	"fmt"
-	interest_calculation_rules "github.com/aditya109/amrutha_assignment/billing/internal/domain/rules/interest_calculation"
+	interestcalculationrules "github.com/aditya109/amrutha_assignment/billing/internal/domain/rules/interest_calculation"
 	"github.com/aditya109/amrutha_assignment/billing/internal/models"
 	"github.com/aditya109/amrutha_assignment/billing/internal/repositories/billing_schedule_repository"
 	"github.com/aditya109/amrutha_assignment/billing/internal/repositories/customer_repository"
@@ -60,6 +60,9 @@ func (c TransitionLoanConstruct) TransitionLoan(b context.Backdrop) (*Output, er
 					loan.Customer.IsActive = true
 					if err := loan_repository.Update(b, loan); err != nil {
 						return nil, fmt.Errorf("error while updating loan state: %v from %s to %s", err, loan.LoanState, models.ActiveLoanType)
+					}
+					if err := customer_repository.Update(b, loan.Customer); err != nil {
+						return nil, fmt.Errorf("error while changing activity state of customer, err: %v", err)
 					}
 					if result, err := attachNewLoanAccount(b, loan); err != nil {
 						loan.LoanState = models.InactiveLoanType
@@ -161,9 +164,9 @@ func createNewLoan(b context.Backdrop, loan *models.Loan, configurationId *int) 
 
 func attachNewLoanAccount(b context.Backdrop, loan *models.Loan) (*Output, error) {
 	var loanConfig = loan.LoanConfig
-	var construct *interest_calculation_rules.ResultantConstructForLoanAccount
+	var construct *interestcalculationrules.ResultantConstructForLoanAccount
 	var err error
-	if construct, err = interest_calculation_rules.CalculateInitialConstructForLoanAccount(b, loanConfig); err != nil {
+	if construct, err = interestcalculationrules.CalculateInitialConstructForLoanAccount(b, loanConfig); err != nil {
 		return nil, fmt.Errorf("error while calculating construct for loan account: %v", err)
 	}
 	var loanAccount = &models.LoanAccount{
@@ -171,12 +174,12 @@ func attachNewLoanAccount(b context.Backdrop, loan *models.Loan) (*Output, error
 		UpdatedAt:              helpers.CreatePointerForValue(time.Now()),
 		LoanId:                 int(loan.Id),
 		Loan:                   loan,
-		PayablePrincipalAmount: construct.PayablePrincipalAmount.String(),
-		AccruedInterest:        construct.AccruedInterest.String(),
-		TotalPayableAmount:     construct.TotalPayableAmount.String(),
-		TotalPaidAmount:        construct.TotalPaidAmount.String(),
-		OutstandingAmount:      construct.TotalPayableAmount.Sub(construct.TotalPaidAmount).String(),
-		InstallmentAmount:      construct.WeeklyInstallmentAmount.String(),
+		PayablePrincipalAmount: construct.PayablePrincipalAmount.StringFixed(2),
+		AccruedInterest:        construct.AccruedInterest.StringFixed(2),
+		TotalPayableAmount:     construct.TotalPayableAmount.StringFixed(2),
+		TotalPaidAmount:        construct.TotalPaidAmount.StringFixed(2),
+		OutstandingAmount:      construct.TotalPayableAmount.Sub(construct.TotalPaidAmount).StringFixed(2),
+		InstallmentAmount:      construct.WeeklyInstallmentAmount.StringFixed(2),
 	}
 	if loanAccount.DisplayId, err = helpers.CreateUniqueDisplayId(models.LoanAccount{
 		LoanId: int(loan.Id),
@@ -195,15 +198,15 @@ func attachNewLoanAccount(b context.Backdrop, loan *models.Loan) (*Output, error
 
 	// create first schedule
 	var nearestSchedule = &models.BillingSchedule{
-		CreatedAt:         time.Now(),
-		UpdatedAt:         time.Now(),
+		CreatedAt:         helpers.CreatePointerForValue(time.Now()),
+		UpdatedAt:         helpers.CreatePointerForValue(time.Now()),
 		LoanAccountId:     loanAccount.Id,
-		StartDate:         time.Now(),
-		EndDate:           time.Now().Add(7 * 24 * time.Hour),
+		StartDate:         helpers.CreatePointerForValue(time.Now()),
+		EndDate:           helpers.CreatePointerForValue(time.Now().Add(7 * 24 * time.Hour)),
 		WeekCount:         1,
 		InstallmentAmount: construct.WeeklyInstallmentAmount.String(),
 	}
-	if err = billing_schedule_repository.Update(b, nearestSchedule); err != nil {
+	if err = billing_schedule_repository.Save(b, nearestSchedule); err != nil {
 		return nil, fmt.Errorf("error while updating loan schedule: %v", err)
 	}
 	return &Output{

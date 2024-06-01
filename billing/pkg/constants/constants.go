@@ -17,4 +17,5 @@ const (
 	CUSTOMER_PREFIX     = "CUST"
 	LOAN_PREFIX         = "LN"
 	LOAN_ACCOUNT_PREFIX = "LNAC"
+	PAYMENT_PREFIX      = "PAY"
 )
